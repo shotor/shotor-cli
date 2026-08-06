@@ -3,16 +3,40 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source_dir="$script_dir/src"
-install_dir="$HOME/.shotor/bin"
+install_dir=""
 install_mode="copy"
 managed_names=("str" "str-commands")
 
 usage() {
-  echo "Usage: $0 [--link]"
+  echo "Usage: $0 [--link] [--install-dir <path>]"
   echo
   echo "Options:"
-  echo "  --link      Symlink str and str-commands instead of copying them."
-  echo "  -h, --help  Show this help."
+  echo "  --install-dir <path>  Install into this directory."
+  echo "  --link                Symlink str and str-commands instead of copying them."
+  echo "  -h, --help            Show this help."
+}
+
+resolve_install_dir() {
+  local current_user="${USER:-}"
+
+  if [[ -z "$current_user" ]]; then
+    current_user=$(id -un)
+  fi
+
+  if [[ -z "$install_dir" && "$current_user" == "shotor" ]]; then
+    install_dir="$HOME/.shotor/bin"
+  elif [[ -z "$install_dir" ]]; then
+    printf 'Install directory: ' >&2
+
+    if ! IFS= read -r install_dir || [[ -z "$install_dir" ]]; then
+      echo "install: an install directory is required" >&2
+      exit 1
+    fi
+  fi
+
+  if [[ "$install_dir" == "~" || "$install_dir" == "~/"* ]]; then
+    install_dir="$HOME${install_dir#\~}"
+  fi
 }
 
 validate_source() {
@@ -44,24 +68,33 @@ link_source() {
   ln -s "$source_dir/str-commands" "$install_dir/str-commands"
 }
 
-case "${1:-}" in
-  --link)
-    [[ $# -eq 1 ]] || { usage >&2; exit 1; }
-    install_mode="link"
-    ;;
-  -h|--help)
-    usage
-    exit 0
-    ;;
-  "")
-    ;;
-  *)
-    usage >&2
-    exit 1
-    ;;
-esac
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --install-dir)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        usage >&2
+        exit 1
+      fi
+      install_dir="$2"
+      shift 2
+      ;;
+    --link)
+      install_mode="link"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
 
 validate_source
+resolve_install_dir
 mkdir -p "$install_dir"
 remove_managed_targets
 
