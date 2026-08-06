@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name={{VM_NAME}} - Enpass
+Exec=env VM_USER={{VM_USER}} "{{DISPATCHER}}" xpra run {{VM_NAME}} {{VM_IP}} /opt/enpass/Enpass
+Type=Application
+Terminal=false
+Icon=dialog-password
+Categories=Utility;Security;

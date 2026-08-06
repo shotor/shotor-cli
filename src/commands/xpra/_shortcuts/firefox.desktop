@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name={{VM_NAME}} - Firefox
+Exec=env VM_USER={{VM_USER}} "{{DISPATCHER}}" xpra run {{VM_NAME}} {{VM_IP}} firefox
+Type=Application
+Terminal=false
+Icon=firefox
+Categories=Network;WebBrowser;

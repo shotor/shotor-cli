@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+# @description Start an application in a VM's existing Xpra session.
+# @usage str xpra run <vm-name> <vm-ip> <command>
+# @option -h, --help  Show help.
+
+usage() {
+  echo "Usage: $0 <vm-name> <vm-ip> <command>"
+  echo
+  echo "Options:"
+  echo "  -h, --help  Show this help."
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+if [[ $# -lt 3 ]]; then
+    usage >&2
+    exit 1
+fi
+
+VM_NAME="$1"
+VM_IP="$2"
+CMD="$3"
+VM_USER="${VM_USER:-user}"
+
+log() { echo "[*] $*"; }
+
+LAST_OCTET=$(echo "$VM_IP" | awk -F. '{print $4}')
+XPRA_DISPLAY=":$((100 + LAST_OCTET))"
+log "Derived xpra display: $XPRA_DISPLAY"
+
+SERVICE="$VM_NAME.service"
+
+if ! systemctl --user is-active --quiet "$SERVICE"; then
+    log "Systemd service $SERVICE not active, starting..."
+    systemctl --user start "$SERVICE"
+
+    log "Waiting until $SERVICE is active..."
+    until systemctl --user is-active --quiet "$SERVICE"; do
+        sleep 1
+    done
+    log "$SERVICE is active"
+else
+    log "$SERVICE already active"
+fi
+
+log "Running command inside xpra session: $CMD"
+exec xpra control "ssh://${VM_USER}@${VM_IP}/${XPRA_DISPLAY#:}" start "$CMD"

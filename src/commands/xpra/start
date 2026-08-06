@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# @description Start a VM and attach to or create its Xpra session.
+# @usage str xpra start <vm-name>
+# @option -h, --help  Show help.
+
+usage() {
+  echo "Usage: $0 <vm-name>"
+  echo
+  echo "Options:"
+  echo "  -h, --help  Show this help."
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+if [[ $# -lt 1 ]]; then
+    usage >&2
+    exit 1
+fi
+
+# Kill cleanly on Ctrl-C
+trap "echo '[*] Caught Ctrl-C, exiting.'; exit 130" INT
+
+VM_NAME="$1"
+VM_USER="${VM_USER:-user}"
+
+# --- 1. Ensure VM is running ---
+if ! virsh --connect qemu:///system domstate "$VM_NAME" | grep -q running; then
+    echo "[*] Starting VM $VM_NAME..."
+    virsh --connect qemu:///system start "$VM_NAME"
+fi
+
+# --- 2. Wait until IP is available ---
+echo "[*] Waiting for IP address..."
+VM_IP=""
+until [[ -n "$VM_IP" ]]; do
+    VM_IP=$(virsh --connect qemu:///system domifaddr "$VM_NAME" --source agent 2>/dev/null | \
+            awk '/ipv4/ && $4 !~ /^127\./ {print $4; exit}' | cut -d/ -f1 || true)
+    sleep 1
+done
+echo "[*] Got IP: $VM_IP"
+
+# --- 3. Derive xpra display from last octet ---
+LAST_OCTET=$(echo "$VM_IP" | awk -F. '{print $4}')
+XPRA_DISPLAY=":$((100 + LAST_OCTET))"
+echo "[*] Using xpra display $XPRA_DISPLAY"
+
+# --- 4. Wait for SSH ---
+echo "[*] Waiting for SSH on $VM_IP..."
+until ssh -o ConnectTimeout=2 -o BatchMode=yes -o StrictHostKeyChecking=no \
+    "${VM_USER}@${VM_IP}" true 2>/dev/null; do
+    sleep 1
+done
+
+# --- 5. Check if any xpra session exists ---
+if ssh "${VM_USER}@${VM_IP}" "xpra list | grep -q '^:'"; then
+    echo "[*] Session found. Attaching to session..."
+    exec xpra attach ssh://${VM_USER}@${VM_IP}/$XPRA_DISPLAY \
+        --no-splash \
+        --exit-with-children=no \
+        --bell=no \
+        --source-start=gnome-keyring-daemon \
+        --exit-with-client=yes
+else
+    echo "[*] Session not found. Creating new session..."
+    exec xpra start ssh://${VM_USER}@${VM_IP}/$XPRA_DISPLAY \
+        --no-splash \
+        --exit-with-children=no \
+        --bell=no \
+        --source-start=gnome-keyring-daemon \
+        --exit-with-client=yes
+fi

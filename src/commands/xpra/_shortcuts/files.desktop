@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name={{VM_NAME}} - Files
+Exec=env VM_USER={{VM_USER}} "{{DISPATCHER}}" xpra run {{VM_NAME}} {{VM_IP}} nautilus
+Type=Application
+Terminal=false
+Icon=system-file-manager
+Categories=Utility;FileManager;

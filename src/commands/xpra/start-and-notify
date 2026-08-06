@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+# @description Start an Xpra VM session and notify systemd when ready.
+# @usage str xpra start-and-notify <vm-name>
+# @option -h, --help  Show help.
+
+usage() {
+  echo "Usage: $0 <vm-name>"
+  echo
+  echo "Options:"
+  echo "  -h, --help  Show this help."
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+if [[ $# -lt 1 ]]; then
+  usage >&2
+  exit 1
+fi
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+VM_NAME="$1"
+
+(
+    until "$script_dir/is-running" "$VM_NAME"; do
+        sleep 1
+    done
+    systemd-notify --ready
+) &
+
+exec "$script_dir/start" "$VM_NAME"

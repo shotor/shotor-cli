@@ -81,7 +81,6 @@ Files and directories beginning with `_` are private and are not listed or dispa
 ## Scripts
 
 <!-- BEGIN GENERATED SCRIPTS -->
-
 ### `str fzf commands`
 
 Interactively select and run a shell command.
@@ -142,6 +141,63 @@ Print the non-loopback IPv4 address of a virtual machine.
 
 ```sh
 str vm get-ip <vm-name>
+```
+
+### `str xpra init`
+
+Configure Xpra desktop shortcuts and a user service for a VM.
+
+```sh
+str xpra init --name <name> [--user <user>]
+
+Options:
+  --name <name>  Virtual machine name.
+  --user <user>  Remote VM user; defaults to user.
+  -h, --help     Show help.
+```
+
+### `str xpra is-running`
+
+Check whether a local Xpra client is connected to a VM.
+
+```sh
+str xpra is-running <vm-name>
+
+Options:
+  -h, --help  Show help.
+```
+
+### `str xpra run`
+
+Start an application in a VM's existing Xpra session.
+
+```sh
+str xpra run <vm-name> <vm-ip> <command>
+
+Options:
+  -h, --help  Show help.
+```
+
+### `str xpra start`
+
+Start a VM and attach to or create its Xpra session.
+
+```sh
+str xpra start <vm-name>
+
+Options:
+  -h, --help  Show help.
+```
+
+### `str xpra start-and-notify`
+
+Start an Xpra VM session and notify systemd when ready.
+
+```sh
+str xpra start-and-notify <vm-name>
+
+Options:
+  -h, --help  Show help.
 ```
 
 <!-- END GENERATED SCRIPTS -->

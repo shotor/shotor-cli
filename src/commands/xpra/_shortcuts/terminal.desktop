@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name={{VM_NAME}} - Terminal
+Exec=env VM_USER={{VM_USER}} "{{DISPATCHER}}" xpra run {{VM_NAME}} {{VM_IP}} gnome-terminal
+Type=Application
+Terminal=false
+Icon=utilities-terminal
+Categories=Utility;TerminalEmulator;

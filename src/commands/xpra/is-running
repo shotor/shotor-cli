@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# @description Check whether a local Xpra client is connected to a VM.
+# @usage str xpra is-running <vm-name>
+# @option -h, --help  Show help.
+
+usage() {
+  echo "Usage: $0 <vm-name>"
+  echo
+  echo "Options:"
+  echo "  -h, --help  Show this help."
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+if [[ $# -lt 1 ]]; then
+  usage >&2
+  exit 1
+fi
+
+vm_name="$1"
+vm_user="${VM_USER:-user}"
+
+log() {
+  echo "[*] $*"
+}
+
+log "Querying IP for VM $vm_name..."
+vm_ip=$(virsh --connect qemu:///system domifaddr "$vm_name" --source agent 2>/dev/null |
+  awk '/ipv4/ && $4 !~ /^127\./ {print $4; exit}' |
+  cut -d/ -f1 || true)
+
+if [[ -z "$vm_ip" ]]; then
+  log "VM $vm_name has no IP (is it running with qemu-guest-agent?)"
+  exit 1
+fi
+
+log "VM IP is $vm_ip"
+last_octet="${vm_ip##*.}"
+xpra_display=":$((100 + last_octet))"
+xpra_endpoint="ssh://$vm_user@$vm_ip/$xpra_display"
+log "Expected Xpra endpoint is $xpra_endpoint"
+log "Checking local Xpra client processes..."
+
+xpra_processes=$(pgrep -af xpra || true)
+
+while IFS= read -r xpra_process; do
+  if [[ "$xpra_process" == *"$xpra_endpoint"* ]]; then
+    log "Local Xpra client is connected to $vm_name"
+    exit 0
+  fi
+done <<< "$xpra_processes"
+
+log "No local Xpra client is connected to $vm_name"
+exit 1

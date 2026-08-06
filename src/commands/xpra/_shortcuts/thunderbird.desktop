@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name={{VM_NAME}} - Thunderbird
+Exec=env VM_USER={{VM_USER}} "{{DISPATCHER}}" xpra run {{VM_NAME}} {{VM_IP}} thunderbird
+Type=Application
+Terminal=false
+Icon=mail-client
+Categories=Network;Email;

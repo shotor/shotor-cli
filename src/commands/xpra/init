@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# @description Configure Xpra desktop shortcuts and a user service for a VM.
+# @usage str xpra init --name <name> [--user <user>]
+# @option --name <name>  Virtual machine name.
+# @option --user <user>  Remote VM user; defaults to user.
+# @option -h, --help     Show help.
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+commands_dir="$(cd -- "$script_dir/.." && pwd)"
+commands_dir_name="${commands_dir##*/}"
+dispatcher_name="${commands_dir_name%-commands}"
+vm_name=""
+vm_user="user"
+
+if [[ "$dispatcher_name" == "commands" ]]; then
+  dispatcher_name="dispatcher"
+fi
+
+dispatcher_path="${commands_dir%/*}/$dispatcher_name"
+
+usage() {
+  echo "Usage: $0 --name <name> [--user <user>]"
+  echo
+  echo "Options:"
+  echo "  --name <name>  Virtual machine name."
+  echo "  --user <user>  Remote VM user; defaults to user."
+  echo "  -h, --help     Show this help."
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --name)
+      vm_name="$2"
+      shift 2
+      ;;
+    --user)
+      vm_user="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -z "$vm_name" ]]; then
+  echo "init: --name is required" >&2
+  exit 1
+fi
+
+vm_ip=$(virsh --connect qemu:///system domifaddr "$vm_name" --source agent 2>/dev/null |
+  awk '/ipv4/ && $4 !~ /^127\./ {print $4; exit}' |
+  cut -d/ -f1)
+
+applications_dir="$HOME/.local/share/applications"
+services_dir="$HOME/.config/systemd/user"
+shortcuts_dir="$script_dir/_shortcuts"
+mkdir -p "$applications_dir" "$services_dir"
+
+always_shortcuts=(files firefox terminal)
+mapfile -t optional_shortcuts < <(
+  find "$shortcuts_dir" -maxdepth 1 -type f -name '*.desktop' -printf '%f\n' |
+    sed 's/\.desktop$//' |
+    grep -Ev '^(files|firefox|terminal)$' |
+    sort
+)
+
+printf '\nAlways included:\n'
+printf '  %s\n' "${always_shortcuts[@]}"
+printf '\nOptional shortcuts:\n'
+for ((index = 0; index < ${#optional_shortcuts[@]}; index++)); do
+  printf '  %d) %s\n' "$((index + 1))" "${optional_shortcuts[index]}"
+done
+
+printf '\nOptional shortcuts to create (numbers, all, or Enter for none): ' >&2
+IFS=' ' read -r -a selections
+selected_shortcuts=("${always_shortcuts[@]}")
+
+if [[ "${selections[0]:-}" == "all" ]]; then
+  selected_shortcuts+=("${optional_shortcuts[@]}")
+else
+  for selection in "${selections[@]}"; do
+    if [[ ! "$selection" =~ ^[0-9]+$ ]] ||
+       (( selection < 1 || selection > ${#optional_shortcuts[@]} )); then
+      echo "init: invalid shortcut selection: $selection" >&2
+      exit 1
+    fi
+
+    selected_shortcuts+=("${optional_shortcuts[selection - 1]}")
+  done
+fi
+
+removed_shortcuts=()
+for shortcut_name in "${optional_shortcuts[@]}"; do
+  shortcut_selected=false
+
+  for selected_shortcut in "${selected_shortcuts[@]}"; do
+    if [[ "$shortcut_name" == "$selected_shortcut" ]]; then
+      shortcut_selected=true
+      break
+    fi
+  done
+
+  shortcut_file="$applications_dir/$vm_name-$shortcut_name.desktop"
+
+  if [[ "$shortcut_selected" == false && ( -e "$shortcut_file" || -L "$shortcut_file" ) ]]; then
+    rm -f -- "$shortcut_file"
+    removed_shortcuts+=("$shortcut_file")
+  fi
+done
+
+if (( ${#removed_shortcuts[@]} > 0 )); then
+  printf '\nRemoved shortcuts:\n'
+  printf '  %s\n' "${removed_shortcuts[@]}"
+fi
+printf '\nCreated shortcuts:\n'
+for shortcut_name in "${selected_shortcuts[@]}"; do
+  template_file="$shortcuts_dir/$shortcut_name.desktop"
+  output_file="$applications_dir/$vm_name-$shortcut_name.desktop"
+
+  sed \
+    -e "s|{{VM_NAME}}|$vm_name|g" \
+    -e "s|{{VM_USER}}|$vm_user|g" \
+    -e "s|{{VM_IP}}|$vm_ip|g" \
+    -e "s|{{DISPATCHER}}|$dispatcher_path|g" \
+    "$template_file" > "$output_file"
+
+  printf '  %s\n' "$output_file"
+done
+
+service_file="$services_dir/$vm_name.service"
+printf '%s\n' \
+  '[Unit]' \
+  "Description=Start $vm_name VM with xpra session" \
+  'After=default.target' \
+  '' \
+  '[Service]' \
+  'Type=notify' \
+  "Environment=VM_USER=$vm_user" \
+  "ExecStart=$dispatcher_path xpra start-and-notify $vm_name" \
+  'NotifyAccess=all' \
+  'KillMode=control-group' \
+  'TimeoutStopSec=10' \
+  '' \
+  '[Install]' \
+  'WantedBy=default.target' \
+  > "$service_file"
+
+printf '\nCreated service:\n  %s\n' "$service_file"
+printf '\nService definition:\n\n'
+cat "$service_file"
+printf '\nReloading user systemd configuration...\n'
+systemctl --user daemon-reload
+printf 'Done.\n'

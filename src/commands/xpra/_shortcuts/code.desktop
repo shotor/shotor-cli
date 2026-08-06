@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name={{VM_NAME}} - VSCode
+Exec=env VM_USER={{VM_USER}} "{{DISPATCHER}}" xpra run {{VM_NAME}} {{VM_IP}} code
+Type=Application
+Terminal=false
+Icon=vscodium
+Categories=Utility;Development;IDE;
