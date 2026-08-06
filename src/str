@@ -5,6 +5,28 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 COMMANDS_DIR="$SCRIPT_DIR/str-commands"
 
+path_is_private() {
+  local command_path="$1"
+  local relative_path="${command_path#"$COMMANDS_DIR"/}"
+  local path_segment
+  local -a path_segments
+
+  IFS='/' read -r -a path_segments <<< "$relative_path"
+
+  for path_segment in "${path_segments[@]}"; do
+    [[ "$path_segment" == _* ]] && return 0
+  done
+
+  return 1
+}
+
+is_executable_command() {
+  local command_path="$1"
+
+  [[ -f "$command_path" && -x "$command_path" ]] &&
+    ! path_is_private "$command_path"
+}
+
 list_commands() {
   local commands_dir="$1"
   local command_dir
@@ -19,14 +41,14 @@ list_commands() {
   for command_dir in "$commands_dir"/*; do
     command_name="${command_dir##*/}"
 
-    if [[ -f "$command_dir" && -x "$command_dir" ]]; then
+    if is_executable_command "$command_dir"; then
       printf '  %s\n' "$command_name"
       found_command=true
       continue
     fi
 
     for command_entry in "$command_dir"/**; do
-      if [[ -f "$command_entry" && -x "$command_entry" ]]; then
+      if is_executable_command "$command_entry"; then
         printf '  %s\n' "$command_name"
         found_command=true
         break
@@ -41,69 +63,56 @@ list_commands() {
 
 run_command() {
   local -a arguments=("$@")
-  local argument
-  local candidate_path="$COMMANDS_DIR"
-  local command_dir
-  local command_name="${arguments[0]}"
+  local command_path
   local depth
   local index
-  local leaf_name="${arguments[${#arguments[@]} - 1]}"
+  local leaf_name
+  local prefix_is_valid
+  local segment
 
-  for argument in "${arguments[@]}"; do
-    if [[ -z "$argument" || "$argument" == "." || "$argument" == ".." || "$argument" == */* ]]; then
-      echo "str: invalid command segment: $argument" >&2
-      exit 2
-    fi
+  segment="${arguments[0]}"
 
-    candidate_path+="/$argument"
-  done
-
-  if [[ -f "$candidate_path" && -x "$candidate_path" ]]; then
-    exec "$candidate_path"
+  if [[ -z "$segment" || "$segment" == "." || "$segment" == ".." || "$segment" == */* ]]; then
+    echo "str: invalid command segment: $segment" >&2
+    exit 2
   fi
 
-  command_dir="$candidate_path"
-  candidate_path+="/$leaf_name"
-
-  if [[ -f "$candidate_path" && -x "$candidate_path" ]]; then
-    exec "$candidate_path"
-  fi
-
-  if [[ -d "$command_dir" ]]; then
-    list_commands "$command_dir"
-    exit 0
-  fi
-
-  for ((depth = ${#arguments[@]} - 1; depth >= 2; depth--)); do
-    command_dir="$COMMANDS_DIR"
+  for ((depth = ${#arguments[@]}; depth >= 1; depth--)); do
+    command_path="$COMMANDS_DIR"
+    prefix_is_valid=true
 
     for ((index = 0; index < depth; index++)); do
-      command_dir+="/${arguments[index]}"
+      segment="${arguments[index]}"
+
+      if [[ -z "$segment" || "$segment" == "." || "$segment" == ".." || "$segment" == */* ]]; then
+        prefix_is_valid=false
+        break
+      fi
+
+      command_path+="/$segment"
     done
 
-    if [[ -f "$command_dir" && -x "$command_dir" ]]; then
-      exec "$command_dir" "${arguments[@]:depth}"
+    if [[ "$prefix_is_valid" == false ]]; then
+      continue
     fi
 
-    candidate_path="$command_dir/${arguments[depth - 1]}"
+    if is_executable_command "$command_path"; then
+      exec "$command_path" "${arguments[@]:depth}"
+    fi
 
-    if [[ -f "$candidate_path" && -x "$candidate_path" ]]; then
-      exec "$candidate_path" "${arguments[@]:depth}"
+    leaf_name="${arguments[depth - 1]}"
+
+    if is_executable_command "$command_path/$leaf_name"; then
+      exec "$command_path/$leaf_name" "${arguments[@]:depth}"
+    fi
+
+    if (( depth == ${#arguments[@]} )) &&
+       [[ -d "$command_path" ]] &&
+       ! path_is_private "$command_path"; then
+      list_commands "$command_path"
+      exit 0
     fi
   done
-
-  command_dir="$COMMANDS_DIR/$command_name"
-  candidate_path="$command_dir/$command_name"
-
-  if [[ -f "$candidate_path" && -x "$candidate_path" ]]; then
-    exec "$candidate_path" "${arguments[@]:1}"
-  fi
-
-  candidate_path="$COMMANDS_DIR/$command_name"
-
-  if [[ -f "$candidate_path" && -x "$candidate_path" ]]; then
-    exec "$candidate_path" "${arguments[@]:1}"
-  fi
 
   echo "str: command not found: ${arguments[*]}" >&2
   exit 127
