@@ -1,6 +1,6 @@
 # shotor-cli
 
-A small, opinionated dev container environment for the command-line tools and workflows I use often.
+Command-line tools and wrappers I often use.
 
 ## Usage
 
