@@ -1,0 +1,23 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+selection=$(
+  print -rl -- ${(k)commands} |
+  sort -u |
+  fzf \
+    --print-query \
+    --layout=default \
+    --border \
+    --cycle \
+    --height=100% \
+    --prompt='Run ❯ '
+) || exit
+
+query=$(head -n1 <<<"$selection")
+choice=$(tail -n1 <<<"$selection")
+
+cmd="${query:-$choice}"
+
+[[ -n "$cmd" ]] || exit
+
+exec zsh -ic "$cmd"

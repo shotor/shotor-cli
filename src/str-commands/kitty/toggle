@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+window_class="kitty-dropdown-wl"
+
+debug() {
+  if [[ -z "${DEBUG:-}" ]]; then
+    return
+  fi
+
+  echo "[debug] $1" >&2
+}
+
+find_window() {
+  kdotool search --class "$window_class" 2>/dev/null | head -n 1 || true
+}
+
+window=$(find_window)
+
+debug "window class: $window_class"
+debug "window search: $window"
+
+if [[ -z "$window" ]]; then
+  debug "window not found, launching"
+
+  NVIM_MODE=dropdown kitty \
+    --class "$window_class" \
+    -o background_opacity=0.85 \
+    -o background_blur=0 \
+    -o font_size=16 \
+    >/dev/null 2>&1 &
+  disown
+
+  for ((attempt = 1; attempt <= 10; attempt++)); do
+    window=$(find_window)
+    debug "window after search $attempt: $window"
+
+    if [[ -n "$window" ]]; then
+      debug "window found"
+      break
+    fi
+
+    sleep 0.2
+  done
+
+  exit 0
+fi
+
+if kdotool windowstate --is minimized "$window" >/dev/null 2>&1; then
+  debug "window is minimized, activating"
+  exec kdotool windowactivate "$window"
+fi
+
+active_window=$(kdotool getactivewindow 2>/dev/null | head -n 1 || true)
+
+if [[ "$active_window" == "$window" ]]; then
+  debug "window is active, minimizing"
+  exec kdotool windowminimize "$window"
+fi
+
+debug "window is not active, activating"
+exec kdotool windowactivate "$window"

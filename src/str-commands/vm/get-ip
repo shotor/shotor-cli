@@ -3,7 +3,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: vm get-ip <vm-name>" >&2
+  echo "Usage: get-ip <vm-name>" >&2
 }
 
 require_virsh() {

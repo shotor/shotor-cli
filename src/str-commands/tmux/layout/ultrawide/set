@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+kill_others=false
+target=""
+
+usage() {
+  echo "Usage: $0 [--kill-others] [-t <pane-id>]"
+  echo
+  echo "Options:"
+  echo "  --kill-others  Kill all other panes before setting the layout."
+  echo "  -t <pane-id>   Target pane; defaults to the active pane."
+  echo "  -h, --help      Show this help."
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --kill-others)
+      kill_others=true
+      shift
+      ;;
+    -t)
+      if [[ $# -ne 2 ]]; then
+        usage >&2
+        exit 1
+      fi
+      target="$2"
+      shift 2
+      ;;
+    *)
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+# Default to current pane
+if [[ -z "$target" ]]; then
+  target=$(tmux display-message -p '#{pane_id}')
+fi
+
+if $kill_others; then
+  tmux kill-pane -a -t "$target"
+fi
+
+w=$(tmux display-message -p -t "$target" '#{window_width}')
+
+side=$((w / 4))
+center=$((w / 2))
+
+# Root pane
+root="$target"
+
+# Right column
+right=$(
+  tmux split-window \
+    -t "$root" \
+    -h \
+    -l "$side" \
+    -P \
+    -F '#{pane_id}'
+)
+
+# Center pane
+center_id=$(
+  tmux split-window \
+    -t "$root" \
+    -h \
+    -l "$center" \
+    -P \
+    -F '#{pane_id}'
+)
+
+# Left column
+tmux split-window \
+  -t "$root" \
+  -v
+
+# Right column
+tmux split-window \
+  -t "$right" \
+  -v
+
+tmux select-pane -t "$center_id"

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+target=":.2"
+
+# Geometry of the center pane
+read left top width height <<<"$(
+  tmux display-message -t "$target" -p \
+    '#{pane_left} #{pane_top} #{pane_width} #{pane_height}'
+)"
+
+# Working directory of the currently active pane
+cwd=$(tmux display-message -p '#{pane_current_path}')
+
+client_h=$(tmux display-message -p '#{client_height}')
+
+# Popup occupies ~80% of the center pane
+popup_w=$(( width * 8 / 10 ))
+popup_h=$(( height * 8 / 10 ))
+
+# Center horizontally
+x=$(( left + (width - popup_w) / 2 ))
+
+# tmux popup Y coordinates are measured from the bottom
+desired_top=$(( top + (height - popup_h) / 2 ))
+y=$(( client_h - desired_top ))
+
+tmux display-popup \
+  -d "$cwd" \
+  -x "$x" \
+  -y "$y" \
+  -w "$popup_w" \
+  -h "$popup_h" \
+  -E -- "$@"

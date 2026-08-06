@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "Usage: $0 [--keep-active]"
+  echo
+  echo "Options:"
+  echo "  --keep-active  Keep the active pane as the logical center."
+  echo "  -h, --help     Show this help."
+}
+
+keep_active=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --keep-active)
+      keep_active=true
+      shift
+      ;;
+    *)
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+# Remember the pane the user was in.
+original_pane=$(tmux display-message -p '#{pane_id}')
+
+# Determine the logical center pane (currently unused except for future pane swapping).
+if $keep_active; then
+  center="$original_pane"
+else
+  center=$(tmux list-panes -F '#{pane_index} #{pane_id}' |
+    awk '$1 == 2 { print $2 }')
+fi
+
+count=$(tmux list-panes | wc -l)
+
+if (( count > 5 )); then
+  echo "Expected at most 5 panes, found $count"
+  exit 1
+fi
+
+# Create missing panes. Their arrangement doesn't matter because
+# we'll immediately normalize the layout afterwards.
+while (( $(tmux list-panes | wc -l) < 5 )); do
+  tmux split-window -d
+done
+
+# Generate the canonical layout in a hidden scratch window.
+scratch=$(tmux new-window -d -P -F '#{pane_id}')
+
+"$HOME/.shotor/bin/tmux-main-layout" -t "$scratch"
+
+layout=$(tmux display-message -p -t "$scratch" '#{window_layout}')
+
+tmux kill-window -t "$scratch"
+
+# Normalize the current window.
+tmux select-layout "$layout"
+
+# Restore the user's focus.
+tmux select-pane -t "$original_pane"
