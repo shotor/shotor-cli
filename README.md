@@ -1,6 +1,6 @@
 # shotor-cli
 
-CLI tools I often use, bundled behind a wrapper. Drop in any standalone script and it just works™.
+Bundled scripts I often use. Drop in any standalone script and it just works™.
 
 ## Install
 
