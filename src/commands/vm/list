@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# @description List all virtual machines and their status.
+# @usage str vm list
+# @option -h, --help  Show help.
+
+usage() {
+  echo "Usage: $0"
+  echo
+  echo "Options:"
+  echo "  -h, --help  Show this help."
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+if [[ $# -ne 0 ]]; then
+  usage >&2
+  exit 2
+fi
+
+if ! command -v virsh >/dev/null 2>&1; then
+  echo "vm: virsh is not installed" >&2
+  exit 127
+fi
+
+virsh --connect qemu:///system list --all

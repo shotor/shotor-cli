@@ -143,6 +143,29 @@ Print the non-loopback IPv4 address of a virtual machine.
 str vm get-ip <vm-name>
 ```
 
+### `str vm list`
+
+List all virtual machines and their status.
+
+```sh
+str vm list
+
+Options:
+  -h, --help  Show help.
+```
+
+### `str vm stop`
+
+Stop a VM's user service and then stop the virtual machine.
+
+```sh
+str vm stop [--force] <vm-name>
+
+Options:
+  --force     Power off the VM immediately.
+  -h, --help  Show help.
+```
+
 ### `str xpra init`
 
 Configure Xpra desktop shortcuts and a user service for a VM.
@@ -194,10 +217,11 @@ Options:
 Start an Xpra VM session and notify systemd when ready.
 
 ```sh
-str xpra start-and-notify <vm-name>
+str xpra start-and-notify [--timeout <seconds>] <vm-name>
 
 Options:
-  -h, --help  Show help.
+  --timeout <seconds>  Readiness timeout; defaults to 60 seconds.
+  -h, --help           Show help.
 ```
 
 <!-- END GENERATED SCRIPTS -->
