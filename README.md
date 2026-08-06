@@ -8,6 +8,7 @@ Choose a dispatcher name and install it into a directory in `PATH`:
 
 ```sh
 ./install.sh --name love --install-dir "/home/lovelace/.local/bin"
+# "love" will now be available as a global executable
 ```
 
 If `--name` is omitted, the installer uses `str` for the `shotor` user and prompts everyone else. The command directory is installed as `<name>-commands`.
