@@ -1,0 +1,12 @@
+{
+  "name": "shotor-cli",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "postStartCommand": "bash .devcontainer/post-start.sh > /tmp/post-start.log 2>&1",
+  "customizations": {
+    "vscode": {
+      "extensions": ["esbenp.prettier-vscode", "openai.chatgpt"]
+    }
+  }
+}
