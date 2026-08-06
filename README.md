@@ -1,16 +1,96 @@
 # shotor-cli
 
-Command-line tools and wrappers I often use.
+CLI tools I often use, bundled behind a wrapper. Drop in any standalone script and it just works™.
+
+## Install
+
+Run the install script, make sure the directory is in PATH:
+
+```sh
+./install.sh --install-dir "/home/lovelace/.local/bin"
+```
+
+For convenience, add `--link` to symlink instead of copying:
+
+```sh
+./install.sh --link --install-dir "/home/lovelace/.local/bin"
+```
 
 ## Usage
 
-### Command line
+`str` discovers executable files under `str-commands`. Directories become command namespaces, and the remaining arguments are forwarded unchanged to the matched executable.
 
-> TODO
+For example:
 
-### Dev container
+```sh
+str-commands/
+├── kitty/
+│   └── toggle
+└── tmux/
+    └── layout/
+        └── ultrawide/
+            └── restore
+```
 
-#### Dependencies
+These files are available as:
+
+```sh
+str kitty toggle
+str tmux layout ultrawide restore
+```
+
+Run `str` or any namespace by itself to list the commands below it:
+
+```sh
+str
+
+Available commands:
+  fzf
+  kitty
+  tmux
+  vm
+```
+
+```sh
+str tmux
+
+Available commands:
+  float
+  layout
+```
+
+```sh
+str tmux layout
+
+Available commands:
+  ultrawide
+```
+
+To add a command, place an executable script anywhere under `str-commands`:
+
+```sh
+chmod +x str-commands/example
+str example
+```
+
+Files and directories beginning with `_` are private and are not listed or dispatched.
+
+## Development
+
+### Standalone
+
+Make changes directly in the `src` directory from your host machine. No additional development environment is required.
+
+Run the tool from source while developing:
+
+```sh
+./src/str
+./src/str kitty toggle
+```
+
+### DevContainer
+
+Install dependencies:
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Visual Studio Code](https://code.visualstudio.com/) or [VSCodium](https://vscodium.com/)
@@ -30,6 +110,13 @@ When using `VSCodium`, run the extension installer inside the container after it
 .devcontainer/install-extensions.sh
 ```
 
+Run the tool:
+
+```sh
+./src/str
+./src/str kitty toggle
+```
+
 ## License
 
-[GNU General Public License v2.0](LICENSE.md).
+[GNU General Public License v2.0](LICENSE.md)
