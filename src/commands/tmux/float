@@ -1,40 +1,123 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# @description Run a command in a tmux popup sized relative to the center pane.
-# @usage str tmux float <command> [argument ...]
+# @description Toggle a persistent command in a tmux popup.
+# @usage str tmux float [--name <name>] [--kill] [--] [command [argument ...]]
+# @option --name <name>  Name the persistent float; defaults to default.
+# @option --kill         Kill the named float instead of showing it.
+# @option -h, --help     Show help.
 
+name="default"
+kill_float=false
 target=":.2"
-popup_command=""
 
-printf -v popup_command '%q ' "$@"
+usage() {
+  echo "Usage: $0 [--name <name>] [--kill] [--] [command [argument ...]]"
+  echo
+  echo "Options:"
+  echo "  --name <name>  Name the persistent float; defaults to default."
+  echo "  --kill         Kill the named float instead of showing it."
+  echo "  -h, --help     Show this help."
+}
 
-# Geometry of the center pane
-read left top width height <<<"$(
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --name)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        usage >&2
+        exit 2
+      fi
+
+      name="$2"
+      shift 2
+      ;;
+    --kill)
+      kill_float=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      usage >&2
+      exit 2
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [[ ! "$name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+  echo "float: invalid name: $name" >&2
+  exit 2
+fi
+
+session_name="str-float-$name"
+current_session=$(tmux display-message -p '#{session_name}')
+
+if [[ "$current_session" == "$session_name" && "$kill_float" == false ]]; then
+  tmux detach-client
+  exit 0
+fi
+
+popup_active=$(tmux display-message -p '#{popup_active}')
+
+if [[ "$kill_float" == true ]]; then
+  if [[ "$popup_active" == 1 ]]; then
+    tmux display-popup -C
+  fi
+
+  if tmux has-session -t "=$session_name" 2>/dev/null; then
+    tmux kill-session -t "=$session_name"
+  fi
+
+  exit 0
+fi
+
+if [[ "$popup_active" == 1 ]]; then
+  tmux display-popup -C
+  exit 0
+fi
+
+read -r left top width height <<<"$(
   tmux display-message -t "$target" -p \
     '#{pane_left} #{pane_top} #{pane_width} #{pane_height}'
 )"
 
-# Working directory of the currently active pane
 cwd=$(tmux display-message -p '#{pane_current_path}')
+client_height=$(tmux display-message -p '#{client_height}')
+popup_width=$((width * 8 / 10))
+popup_height=$((height * 8 / 10))
+x=$((left + (width - popup_width) / 2))
+desired_top=$((top + (height - popup_height) / 2))
+y=$((client_height - desired_top))
 
-client_h=$(tmux display-message -p '#{client_height}')
+if ! tmux has-session -t "=$session_name" 2>/dev/null; then
+  if [[ $# -eq 0 ]]; then
+    echo "float: command required for new float: $name" >&2
+    exit 2
+  fi
 
-# Popup occupies ~80% of the center pane
-popup_w=$(( width * 8 / 10 ))
-popup_h=$(( height * 8 / 10 ))
+  printf -v popup_command '%q ' "$@"
+  tmux new-session -d -s "$session_name" -c "$cwd" "$popup_command"
+fi
 
-# Center horizontally
-x=$(( left + (width - popup_w) / 2 ))
-
-# tmux popup Y coordinates are measured from the bottom
-desired_top=$(( top + (height - popup_h) / 2 ))
-y=$(( client_h - desired_top ))
+tmux_socket="${TMUX%%,*}"
+printf -v attach_command \
+  'env -u TMUX tmux -S %q attach-session -t %q' \
+  "$tmux_socket" \
+  "$session_name"
 
 tmux display-popup \
   -d "$cwd" \
   -x "$x" \
   -y "$y" \
-  -w "$popup_w" \
-  -h "$popup_h" \
-  -E -- "$popup_command"
+  -w "$popup_width" \
+  -h "$popup_height" \
+  -E -- "$attach_command"

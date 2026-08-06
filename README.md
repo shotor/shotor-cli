@@ -104,10 +104,15 @@ Options:
 
 ### `str tmux float`
 
-Run a command in a tmux popup sized relative to the center pane.
+Toggle a persistent command in a tmux popup.
 
 ```sh
-str tmux float <command> [argument ...]
+str tmux float [--name <name>] [--kill] [--] [command [argument ...]]
+
+Options:
+  --name <name>  Name the persistent float; defaults to default.
+  --kill         Kill the named float instead of showing it.
+  -h, --help     Show help.
 ```
 
 ### `str tmux layout ultrawide restore`

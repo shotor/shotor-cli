@@ -13,6 +13,7 @@ selection=$(
     --border \
     --cycle \
     --height=100% \
+    --bind='tab:replace-query' \
     --prompt='Run ❯ '
 ) || exit
 
