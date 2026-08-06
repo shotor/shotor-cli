@@ -20,4 +20,4 @@ cmd="${query:-$choice}"
 
 [[ -n "$cmd" ]] || exit
 
-exec zsh -ic "$cmd"
+exec zsh -ic "${cmd}"$'\n''exec zsh -i'
