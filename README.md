@@ -4,21 +4,23 @@ CLI tools I often use, bundled behind a wrapper. Drop in any standalone script a
 
 ## Install
 
-Run the install script, make sure the directory is in PATH:
+Choose a dispatcher name and install it into a directory in `PATH`:
 
 ```sh
-./install.sh --install-dir "/home/lovelace/.local/bin"
+./install.sh --name love --install-dir "/home/lovelace/.local/bin"
 ```
+
+If `--name` is omitted, the installer uses `str` for the `shotor` user and prompts everyone else. The command directory is installed as `<name>-commands`.
 
 For convenience, add `--link` to symlink instead of copying:
 
 ```sh
-./install.sh --link --install-dir "/home/lovelace/.local/bin"
+./install.sh --link --name love --install-dir "/home/lovelace/.local/bin"
 ```
 
 ## Usage
 
-`str` discovers executable files under `str-commands`. Directories become command namespaces, and the remaining arguments are forwarded unchanged to the matched executable.
+The installed dispatcher discovers executable files under its matching `<name>-commands` directory. For example, `str` uses `str-commands`. Directories become command namespaces, and the remaining arguments are forwarded unchanged to the matched executable.
 
 For example:
 
@@ -66,10 +68,10 @@ Available commands:
   ultrawide
 ```
 
-To add a command, place an executable script anywhere under `str-commands`:
+To add a command, place an executable script anywhere under `src/commands`:
 
 ```sh
-chmod +x str-commands/example
+chmod +x src/commands/example
 str example
 ```
 
@@ -152,8 +154,8 @@ Make changes directly in the `src` directory from your host machine. No addition
 Run the tool from source while developing:
 
 ```sh
-./src/str
-./src/str kitty toggle
+./src/dispatcher
+./src/dispatcher kitty toggle
 ```
 
 ### DevContainer
@@ -181,8 +183,8 @@ When using `VSCodium`, run the extension installer inside the container after it
 Run the tool:
 
 ```sh
-./src/str
-./src/str kitty toggle
+./src/dispatcher
+./src/dispatcher kitty toggle
 ```
 
 ### Documentation

@@ -5,25 +5,52 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source_dir="$script_dir/src"
 install_dir=""
 install_mode="copy"
-managed_names=("str" "str-commands")
+install_name=""
 
 usage() {
-  echo "Usage: $0 [--link] [--install-dir <path>]"
+  echo "Usage: $0 [--link] [--name <name>] [--install-dir <path>]"
   echo
   echo "Options:"
   echo "  --install-dir <path>  Install into this directory."
-  echo "  --link                Symlink str and str-commands instead of copying them."
+  echo "  --name <name>         Name the dispatcher and <name>-commands directory."
+  echo "  --link                Symlink instead of copying."
   echo "  -h, --help            Show this help."
 }
 
-resolve_install_dir() {
-  local current_user="${USER:-}"
+current_user() {
+  if [[ -n "${USER:-}" ]]; then
+    printf '%s\n' "$USER"
+  else
+    id -un
+  fi
+}
 
-  if [[ -z "$current_user" ]]; then
-    current_user=$(id -un)
+resolve_install_name() {
+  local user_name
+  user_name=$(current_user)
+
+  if [[ -z "$install_name" && "$user_name" == "shotor" ]]; then
+    install_name="str"
+  elif [[ -z "$install_name" ]]; then
+    printf 'Dispatcher name: ' >&2
+
+    if ! IFS= read -r install_name || [[ -z "$install_name" ]]; then
+      echo "install: a dispatcher name is required" >&2
+      exit 1
+    fi
   fi
 
-  if [[ -z "$install_dir" && "$current_user" == "shotor" ]]; then
+  if [[ "$install_name" == "." || "$install_name" == ".." || "$install_name" == */* ]]; then
+    echo "install: invalid dispatcher name: $install_name" >&2
+    exit 1
+  fi
+}
+
+resolve_install_dir() {
+  local user_name
+  user_name=$(current_user)
+
+  if [[ -z "$install_dir" && "$user_name" == "shotor" ]]; then
     install_dir="$HOME/.shotor/bin"
   elif [[ -z "$install_dir" ]]; then
     printf 'Install directory: ' >&2
@@ -40,32 +67,32 @@ resolve_install_dir() {
 }
 
 validate_source() {
-  if [[ ! -f "$source_dir/str" || ! -d "$source_dir/str-commands" ]]; then
-    echo "install: expected src/str and src/str-commands" >&2
+  if [[ ! -f "$source_dir/dispatcher" || ! -d "$source_dir/commands" ]]; then
+    echo "install: expected src/dispatcher and src/commands" >&2
     exit 1
   fi
 }
 
 remove_managed_targets() {
-  local managed_name
   local target_path
+  local -a target_paths=(
+    "$install_dir/$install_name"
+    "$install_dir/$install_name-commands"
+  )
 
-  for managed_name in "${managed_names[@]}"; do
-    target_path="$install_dir/$managed_name"
+  for target_path in "${target_paths[@]}"; do
     rm -rf -- "$target_path"
   done
 }
 
 copy_source() {
-  cp -a \
-    "$source_dir/str" \
-    "$source_dir/str-commands" \
-    "$install_dir/"
+  cp -a "$source_dir/dispatcher" "$install_dir/$install_name"
+  cp -a "$source_dir/commands" "$install_dir/$install_name-commands"
 }
 
 link_source() {
-  ln -s "$source_dir/str" "$install_dir/str"
-  ln -s "$source_dir/str-commands" "$install_dir/str-commands"
+  ln -s "$source_dir/dispatcher" "$install_dir/$install_name"
+  ln -s "$source_dir/commands" "$install_dir/$install_name-commands"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -76,6 +103,14 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       install_dir="$2"
+      shift 2
+      ;;
+    --name)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        usage >&2
+        exit 1
+      fi
+      install_name="$2"
       shift 2
       ;;
     --link)
@@ -94,6 +129,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 validate_source
+resolve_install_name
 resolve_install_dir
 mkdir -p "$install_dir"
 remove_managed_targets

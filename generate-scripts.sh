@@ -2,7 +2,7 @@
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-commands_dir="$script_dir/src/str-commands"
+commands_dir="$script_dir/src/commands"
 readme_file="$script_dir/README.md"
 begin_marker="<!-- BEGIN GENERATED SCRIPTS -->"
 end_marker="<!-- END GENERATED SCRIPTS -->"

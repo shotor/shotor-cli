@@ -10,6 +10,15 @@ set -euo pipefail
 window_class="kitty-toggle-wl"
 desktop_entry="net.local.kitty-toggle-wl.sh.desktop"
 window_rule="8212387d-ae01-4402-ac97-90e482cc9303"
+commands_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+commands_dir_name="${commands_dir##*/}"
+dispatcher_name="${commands_dir_name%-commands}"
+
+if [[ "$dispatcher_name" == "commands" ]]; then
+  dispatcher_name="dispatcher"
+fi
+
+dispatcher_path="${commands_dir%/*}/$dispatcher_name"
 
 usage() {
   echo "Usage: $0 [--debug|--install]"
@@ -53,7 +62,7 @@ install_shortcut() {
 
   printf "%s\n" \
     "[Desktop Entry]" \
-    "Exec=$HOME/.shotor/bin/str kitty toggle" \
+    "Exec=\"$dispatcher_path\" kitty toggle" \
     "Name=kitty-toggle-wl" \
     "StartupNotify=false" \
     "Type=Application" \

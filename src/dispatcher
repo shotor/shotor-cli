@@ -2,12 +2,17 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-COMMANDS_DIR="$SCRIPT_DIR/str-commands"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+dispatcher_name="$(basename -- "$0")"
+commands_dir="$script_dir/$dispatcher_name-commands"
+
+if [[ "$dispatcher_name" == "dispatcher" ]]; then
+  commands_dir="$script_dir/commands"
+fi
 
 path_is_private() {
   local command_path="$1"
-  local relative_path="${command_path#"$COMMANDS_DIR"/}"
+  local relative_path="${command_path#"$commands_dir"/}"
   local path_segment
   local -a path_segments
 
@@ -73,12 +78,12 @@ run_command() {
   segment="${arguments[0]}"
 
   if [[ -z "$segment" || "$segment" == "." || "$segment" == ".." || "$segment" == */* ]]; then
-    echo "str: invalid command segment: $segment" >&2
+    echo "$dispatcher_name: invalid command segment: $segment" >&2
     exit 2
   fi
 
   for ((depth = ${#arguments[@]}; depth >= 1; depth--)); do
-    command_path="$COMMANDS_DIR"
+    command_path="$commands_dir"
     prefix_is_valid=true
 
     for ((index = 0; index < depth; index++)); do
@@ -114,12 +119,12 @@ run_command() {
     fi
   done
 
-  echo "str: command not found: ${arguments[*]}" >&2
+  echo "$dispatcher_name: command not found: ${arguments[*]}" >&2
   exit 127
 }
 
 if [[ $# -eq 0 ]]; then
-  list_commands "$COMMANDS_DIR"
+  list_commands "$commands_dir"
   exit 0
 fi
 
