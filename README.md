@@ -195,4 +195,4 @@ The scripts reference is generated from command metadata. Regenerate it after ad
 
 ## License
 
-[GNU General Public License v2.0](LICENSE.md)
+[MIT](LICENSE.md)
