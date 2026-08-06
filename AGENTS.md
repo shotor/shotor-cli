@@ -20,6 +20,10 @@
 - Test successful and unsuccessful command dispatch when changing Shotor.
 - Keep error messages concise and write them to standard error.
 
+## Documentation
+
+- Use `sh` fenced code blocks for CLI explanations, commands, and output examples; never use `text` fences for them.
+
 ## Backup artifacts
 
 - Store temporary backups and patch artifacts in `.backup/`.
@@ -28,7 +32,7 @@
 ## Avoid
 
 - Do not add dependencies without asking first.
-- Do not read, display, or modify anything in `.devcontainer`.
+- Do not modify anything in `.devcontainer`; reading it for project context is allowed.
 - Do not commit, push, or otherwise publish changes.
 - Do not modify unrelated files.
 - Do not create additional documentation unless requested.
