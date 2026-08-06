@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# @description Create the five-pane ultrawide tmux layout.
+# @usage str tmux layout ultrawide set [--kill-others] [-t <pane-id>]
+# @option --kill-others  Kill all other panes before setting the layout.
+# @option -t <pane-id>   Target pane; defaults to the active pane.
+# @option -h, --help     Show help.
+
 kill_others=false
 target=""
 

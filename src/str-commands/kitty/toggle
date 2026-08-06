@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# @description Toggle the Kitty window and manage its KDE integration.
+# @usage str kitty toggle [--debug|--install]
+# @option --debug     Print window detection and toggle decisions to stderr.
+# @option --install   Install the KDE shortcut and window rule.
+# @option -h, --help  Show help.
+
 window_class="kitty-toggle-wl"
 desktop_entry="net.local.kitty-toggle-wl.sh.desktop"
 window_rule="8212387d-ae01-4402-ac97-90e482cc9303"

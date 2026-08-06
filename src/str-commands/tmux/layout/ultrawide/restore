@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# @description Restore the five-pane ultrawide tmux layout.
+# @usage str tmux layout ultrawide restore [--keep-active]
+# @option --keep-active  Keep the active pane as the logical center.
+# @option -h, --help     Show help.
+
 usage() {
   echo "Usage: $0 [--keep-active]"
   echo

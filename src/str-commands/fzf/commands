@@ -1,6 +1,9 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
+# @description Interactively select and run a shell command.
+# @usage str fzf commands
+
 selection=$(
   print -rl -- ${(k)commands} |
   sort -u |

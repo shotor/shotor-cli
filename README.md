@@ -75,6 +75,74 @@ str example
 
 Files and directories beginning with `_` are private and are not listed or dispatched.
 
+## Scripts
+
+<!-- BEGIN GENERATED SCRIPTS -->
+
+### `str fzf commands`
+
+Interactively select and run a shell command.
+
+```sh
+str fzf commands
+```
+
+### `str kitty toggle`
+
+Toggle the Kitty window and manage its KDE integration.
+
+```sh
+str kitty toggle [--debug|--install]
+
+Options:
+  --debug     Print window detection and toggle decisions to stderr.
+  --install   Install the KDE shortcut and window rule.
+  -h, --help  Show help.
+```
+
+### `str tmux float`
+
+Run a command in a tmux popup sized relative to the center pane.
+
+```sh
+str tmux float <command> [argument ...]
+```
+
+### `str tmux layout ultrawide restore`
+
+Restore the five-pane ultrawide tmux layout.
+
+```sh
+str tmux layout ultrawide restore [--keep-active]
+
+Options:
+  --keep-active  Keep the active pane as the logical center.
+  -h, --help     Show help.
+```
+
+### `str tmux layout ultrawide set`
+
+Create the five-pane ultrawide tmux layout.
+
+```sh
+str tmux layout ultrawide set [--kill-others] [-t <pane-id>]
+
+Options:
+  --kill-others  Kill all other panes before setting the layout.
+  -t <pane-id>   Target pane; defaults to the active pane.
+  -h, --help     Show help.
+```
+
+### `str vm get-ip`
+
+Print the non-loopback IPv4 address of a virtual machine.
+
+```sh
+str vm get-ip <vm-name>
+```
+
+<!-- END GENERATED SCRIPTS -->
+
 ## Development
 
 ### Standalone
@@ -115,6 +183,14 @@ Run the tool:
 ```sh
 ./src/str
 ./src/str kitty toggle
+```
+
+### Documentation
+
+The scripts reference is generated from command metadata. Regenerate it after adding or changing commands:
+
+```sh
+./generate-scripts.sh
 ```
 
 ## License

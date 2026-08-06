@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# @description Print the non-loopback IPv4 address of a virtual machine.
+# @usage str vm get-ip <vm-name>
+
 usage() {
   echo "Usage: get-ip <vm-name>" >&2
 }

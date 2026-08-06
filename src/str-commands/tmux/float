@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# @description Run a command in a tmux popup sized relative to the center pane.
+# @usage str tmux float <command> [argument ...]
+
 target=":.2"
 popup_command=""
 
