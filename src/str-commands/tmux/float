@@ -2,6 +2,9 @@
 set -euo pipefail
 
 target=":.2"
+popup_command=""
+
+printf -v popup_command '%q ' "$@"
 
 # Geometry of the center pane
 read left top width height <<<"$(
@@ -31,4 +34,4 @@ tmux display-popup \
   -y "$y" \
   -w "$popup_w" \
   -h "$popup_h" \
-  -E -- "$@"
+  -E -- "$popup_command"
