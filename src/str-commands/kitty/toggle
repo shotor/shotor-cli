@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-window_class="kitty-dropdown-wl"
+window_class="kitty-toggle-wl"
+desktop_entry="net.local.kitty-toggle-wl.sh.desktop"
+window_rule="8212387d-ae01-4402-ac97-90e482cc9303"
+
+usage() {
+  echo "Usage: $0 [--debug|--install]"
+  echo
+  echo "Options:"
+  echo "  --debug     Print window detection and toggle decisions to stderr."
+  echo "  --install   Install the KDE shortcut and window rule."
+  echo "  -h, --help  Show this help."
+}
 
 debug() {
   if [[ -z "${DEBUG:-}" ]]; then
@@ -14,6 +25,146 @@ debug() {
 find_window() {
   kdotool search --class "$window_class" 2>/dev/null | head -n 1 || true
 }
+
+install_shortcut() {
+  local applications_dir="$HOME/.local/share/applications"
+  local desktop_file="$applications_dir/$desktop_entry"
+  local kde_config_reader
+  local kde_config_writer
+
+  if command -v kwriteconfig6 >/dev/null 2>&1 && command -v kreadconfig6 >/dev/null 2>&1; then
+    kde_config_reader="kreadconfig6"
+    kde_config_writer="kwriteconfig6"
+  elif command -v kwriteconfig5 >/dev/null 2>&1 && command -v kreadconfig5 >/dev/null 2>&1; then
+    kde_config_reader="kreadconfig5"
+    kde_config_writer="kwriteconfig5"
+  else
+    echo "toggle: KDE configuration readers and writers are required" >&2
+    exit 1
+  fi
+
+  mkdir -p "$applications_dir"
+
+  printf "%s\n" \
+    "[Desktop Entry]" \
+    "Exec=$HOME/.shotor/bin/str kitty toggle" \
+    "Name=kitty-toggle-wl" \
+    "StartupNotify=false" \
+    "Type=Application" \
+    "X-KDE-GlobalAccel-CommandShortcut=true" \
+    > "$desktop_file"
+
+  "$kde_config_writer" \
+    --file kglobalshortcutsrc \
+    --group services \
+    --group "$desktop_entry" \
+    --key _launch \
+    "Ctrl+\`"
+
+  local existing_rules
+  local joined_rules
+  local rule_id
+  local rule_key
+  local rule_setting
+  local rule_value
+  local -a existing_rule_ids
+  local -a rule_ids=()
+  local -a rule_settings=(
+    "Description=$window_class"
+    "activity=00000000-0000-0000-0000-000000000000"
+    "activityrule=2"
+    'desktops=\0'
+    "desktopsrule=2"
+    "fullscreen=true"
+    "fullscreenrule=2"
+    "noborder=true"
+    "noborderrule=2"
+    "skippager=true"
+    "skippagerrule=2"
+    "skipswitcher=true"
+    "skipswitcherrule=2"
+    "skiptaskbar=true"
+    "skiptaskbarrule=2"
+    "wmclass=$window_class"
+    "wmclassmatch=2"
+  )
+
+  for rule_setting in "${rule_settings[@]}"; do
+    rule_key="${rule_setting%%=*}"
+    rule_value="${rule_setting#*=}"
+    "$kde_config_writer" \
+      --file kwinrulesrc \
+      --group "$window_rule" \
+      --key "$rule_key" \
+      "$rule_value"
+  done
+
+  existing_rules=$(
+    "$kde_config_reader" \
+      --file kwinrulesrc \
+      --group General \
+      --key rules \
+      --default "" \
+      2>/dev/null || true
+  )
+  IFS=',' read -r -a existing_rule_ids <<< "$existing_rules"
+
+  for rule_id in "${existing_rule_ids[@]}"; do
+    if [[ -n "$rule_id" && "$rule_id" != "$window_rule" ]]; then
+      rule_ids+=("$rule_id")
+    fi
+  done
+
+  rule_ids+=("$window_rule")
+  joined_rules=$(IFS=','; echo "${rule_ids[*]}")
+
+  "$kde_config_writer" \
+    --file kwinrulesrc \
+    --group General \
+    --key count \
+    "${#rule_ids[@]}"
+  "$kde_config_writer" \
+    --file kwinrulesrc \
+    --group General \
+    --key rules \
+    "$joined_rules"
+
+  if command -v kbuildsycoca6 >/dev/null 2>&1; then
+    kbuildsycoca6 --noincremental >/dev/null
+  elif command -v kbuildsycoca5 >/dev/null 2>&1; then
+    kbuildsycoca5 --noincremental >/dev/null
+  fi
+
+  if command -v qdbus6 >/dev/null 2>&1; then
+    qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+  elif command -v qdbus >/dev/null 2>&1; then
+    qdbus org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+  fi
+
+  echo "Installed KDE shortcut and window rule. Log out and back in if the shortcut is not active yet."
+}
+
+case "${1:-}" in
+  --debug)
+    [[ $# -eq 1 ]] || { usage >&2; exit 1; }
+    DEBUG=1
+    ;;
+  --install)
+    [[ $# -eq 1 ]] || { usage >&2; exit 1; }
+    install_shortcut
+    exit 0
+    ;;
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  "")
+    ;;
+  *)
+    usage >&2
+    exit 1
+    ;;
+esac
 
 window=$(find_window)
 
