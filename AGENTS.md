@@ -20,6 +20,11 @@
 - Test successful and unsuccessful command dispatch when changing Shotor.
 - Keep error messages concise and write them to standard error.
 
+## Backup artifacts
+
+- Store temporary backups and patch artifacts in `.backup/`.
+- Do not leave `.orig`, `.rej`, or similar backup files beside source files.
+
 ## Avoid
 
 - Do not add dependencies without asking first.
