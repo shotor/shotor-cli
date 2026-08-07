@@ -26,7 +26,7 @@ Skip completion installation when only the dispatcher and commands are needed:
 ./install.sh --skip-completions --name love --install-dir "/home/lovelace/.local/bin"
 ```
 
-Install completion separately by passing the same dispatcher name. The installed completion is generated, so rerun this command whenever `install-completions.sh` changes:
+Install completion separately by passing the same dispatcher name. The installed completion is generated, so rerun this command whenever a script signature or its option metadata changes:
 
 ```sh
 ./install-completions.sh love
