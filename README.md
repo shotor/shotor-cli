@@ -13,6 +13,25 @@ Choose a dispatcher name and install it into a directory in `PATH`:
 
 If `--name` is omitted, the installer uses `str` for the `shotor` user and prompts everyone else. The command directory is installed as `<name>-commands`.
 
+`install.sh` also installs completion for the chosen dispatcher name. Oh My Zsh is preferred when detected; otherwise, completion is installed for every available supported shell:
+
+- Zsh: `${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions/_love`
+- Bash: `${BASH_COMPLETION_USER_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion}/completions/love`
+
+For standalone Zsh, add the reported `site-functions` directory to `fpath` before `compinit`. Bash completion is loaded automatically when `bash-completion` is configured. The installer prints the relevant activation instructions.
+
+Skip completion installation when only the dispatcher and commands are needed:
+
+```sh
+./install.sh --skip-completions --name love --install-dir "/home/lovelace/.local/bin"
+```
+
+Install completion separately by passing the same dispatcher name. The installed completion is generated, so rerun this command whenever `install-completions.sh` changes:
+
+```sh
+./install-completions.sh love
+```
+
 For convenience, add `--link` to symlink instead of copying:
 
 ```sh
@@ -278,7 +297,7 @@ Run the tool:
 The scripts reference is generated from command metadata. Regenerate it after adding or changing commands:
 
 ```sh
-./generate-scripts.sh
+./update-readme-scripts.sh
 ```
 
 ## License

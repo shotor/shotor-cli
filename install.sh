@@ -3,17 +3,20 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source_dir="$script_dir/src"
+completion_installer="$script_dir/install-completions.sh"
 install_dir=""
 install_mode="copy"
+skip_completions=false
 install_name=""
 
 usage() {
-  echo "Usage: $0 [--link] [--name <name>] [--install-dir <path>]"
+  echo "Usage: $0 [--link] [--skip-completions] [--name <name>] [--install-dir <path>]"
   echo
   echo "Options:"
   echo "  --install-dir <path>  Install into this directory."
   echo "  --name <name>         Name the dispatcher and <name>-commands directory."
   echo "  --link                Symlink instead of copying."
+  echo "  --skip-completions    Do not install shell completions."
   echo "  -h, --help            Show this help."
 }
 
@@ -40,8 +43,20 @@ resolve_install_name() {
     fi
   fi
 
-  if [[ "$install_name" == "." || "$install_name" == ".." || "$install_name" == */* ]]; then
+  if [[ ! "$install_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
     echo "install: invalid dispatcher name: $install_name" >&2
+    exit 1
+  fi
+}
+
+validate_source() {
+  if [[ ! -f "$source_dir/dispatcher" || ! -d "$source_dir/commands" ]]; then
+    echo "install: expected src/dispatcher and src/commands" >&2
+    exit 1
+  fi
+
+  if [[ "$skip_completions" == false && ! -x "$completion_installer" ]]; then
+    echo "install: expected install-completions.sh" >&2
     exit 1
   fi
 }
@@ -66,12 +81,6 @@ resolve_install_dir() {
   fi
 }
 
-validate_source() {
-  if [[ ! -f "$source_dir/dispatcher" || ! -d "$source_dir/commands" ]]; then
-    echo "install: expected src/dispatcher and src/commands" >&2
-    exit 1
-  fi
-}
 
 remove_managed_targets() {
   local target_path
@@ -89,6 +98,7 @@ copy_source() {
   cp -a "$source_dir/dispatcher" "$install_dir/$install_name"
   cp -a "$source_dir/commands" "$install_dir/$install_name-commands"
 }
+
 
 link_source() {
   ln -s "$source_dir/dispatcher" "$install_dir/$install_name"
@@ -112,6 +122,10 @@ while [[ $# -gt 0 ]]; do
       fi
       install_name="$2"
       shift 2
+      ;;
+    --skip-completions)
+      skip_completions=true
+      shift
       ;;
     --link)
       install_mode="link"
@@ -138,4 +152,8 @@ if [[ "$install_mode" == "link" ]]; then
   link_source
 else
   copy_source
+fi
+
+if [[ "$skip_completions" == false ]]; then
+  "$completion_installer" "$install_name"
 fi

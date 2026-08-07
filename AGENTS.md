@@ -24,7 +24,7 @@
 
 - Use `sh` fenced code blocks for CLI explanations, commands, and output examples; never use `text` fences for them.
 - Every public executable under `src/commands` must define `@description` and `@usage` metadata; add `@option` lines when applicable.
-- Run `./generate-scripts.sh` after adding commands or changing their script metadata.
+- Run `./update-readme-scripts.sh` after adding commands or changing their script metadata.
 
 ## Backup artifacts
 

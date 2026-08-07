@@ -43,7 +43,7 @@ while IFS= read -r -d '' command_file; do
   mapfile -t options < <(sed -n 's/^# @option //p' "$command_file")
 
   if [[ -z "$description" || -z "$usage" ]]; then
-    echo "generate-scripts: missing metadata: $relative_path" >&2
+    echo "update-readme-scripts: missing metadata: $relative_path" >&2
     exit 1
   fi
 
@@ -67,7 +67,7 @@ while IFS= read -r -d '' command_file; do
 done < <(find "$commands_dir" -type f -perm /111 -print0 | sort -z)
 
 if [[ "$found_command" == false ]]; then
-  echo "generate-scripts: no public executable commands found" >&2
+  echo "update-readme-scripts: no public executable commands found" >&2
   exit 1
 fi
 
@@ -103,7 +103,7 @@ awk \
     }
   }
 ' "$readme_file" > "$output_file" || {
-  echo "generate-scripts: README Scripts markers not found" >&2
+  echo "update-readme-scripts: README Scripts markers not found" >&2
   exit 1
 }
 
