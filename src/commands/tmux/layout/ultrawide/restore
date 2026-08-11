@@ -60,7 +60,7 @@ done
 # Generate the canonical layout in a hidden scratch window.
 scratch=$(tmux new-window -d -P -F '#{pane_id}')
 
-"$HOME/.shotor/bin/tmux-main-layout" -t "$scratch"
+"$HOME/.shotor/bin/str" tmux layout ultrawide set -t "$scratch"
 
 layout=$(tmux display-message -p -t "$scratch" '#{window_layout}')
 
