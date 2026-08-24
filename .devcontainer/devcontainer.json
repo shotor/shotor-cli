@@ -1,12 +1,63 @@
 {
   "name": "shotor-cli",
-  "build": {
-    "dockerfile": "Dockerfile"
+  "image": "ghcr.io/shotor/devcontainer/images/debian:0",
+  "features": {
+    "ghcr.io/shotor/devcontainer/features/claude:0": {},
+    "ghcr.io/shotor/devcontainer/features/codex:0": {},
+    "ghcr.io/shotor/devcontainer/features/cursor:0": {},
+    "ghcr.io/shotor/devcontainer/features/pi:0": {}
   },
-  "postStartCommand": "bash .devcontainer/post-start.sh > /tmp/post-start.log 2>&1",
+  "postCreateCommand": "agent-auth",
+
+  "remoteUser": "user",
+  "updateRemoteUserUID": true,
+
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+
+  "containerEnv": {
+    "HISTFILE": "/commandhistory/.zsh_history"
+  },
+
+  "mounts": [
+    {
+      "type": "bind",
+      "source": "${localWorkspaceFolder}/.devcontainer/volumes/history",
+      "target": "/commandhistory"
+    },
+    {
+      "type": "bind",
+      "source": "${localWorkspaceFolder}/.devcontainer/volumes/codex",
+      "target": "/home/user/.codex"
+    },
+    {
+      "type": "bind",
+      "source": "${localWorkspaceFolder}/.devcontainer/volumes/cursor",
+      "target": "/home/user/.cursor"
+    },
+    {
+      "type": "bind",
+      "source": "${localWorkspaceFolder}/.devcontainer/volumes/claude",
+      "target": "/home/user/.claude"
+    },
+    {
+      "type": "bind",
+      "source": "${localWorkspaceFolder}/.devcontainer/volumes/pi",
+      "target": "/home/user/.pi"
+    }
+  ],
+
   "customizations": {
     "vscode": {
-      "extensions": ["esbenp.prettier-vscode", "openai.chatgpt"]
+      "extensions": ["oxc.oxc-vscode"],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "oxc.oxc-vscode",
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
     }
-  }
+  }  
 }

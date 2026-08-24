@@ -1,2 +1,17 @@
-.env
-.backup/
+# devcontainer volumes
+.devcontainer/volumes/**
+!.devcontainer/volumes/**/
+.devcontainer/volumes/**/.*
+!.devcontainer/volumes/**/.gitkeep
+
+# devsy
+.devsy-internal
+
+# agents
+.agents
+.backup
+.claude
+.cursor
+
+# temporary files
+__NOTES__.md
