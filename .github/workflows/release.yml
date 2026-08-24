@@ -17,19 +17,19 @@ jobs:
       version: ${{ steps.next.outputs.version }}
       previous_version: ${{ steps.next.outputs.previous_version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
       - name: Determine next version
         id: next
         run: |
-          pip install 'commitizen==4.17.0'
+          pip install 'commitizen==4.18.0'
           previous="$(cz version --project)"
           set +e
           next="$(cz bump --yes --get-next 2>/tmp/cz-get-next.err)"
@@ -54,10 +54,10 @@ jobs:
     if: needs.version.outputs.version != '' && needs.version.outputs.version != needs.version.outputs.previous_version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .vendor
           key: ${{ runner.os }}-vendor-${{ hashFiles('scripts/bootstrap.sh') }}
@@ -71,10 +71,10 @@ jobs:
     if: needs.version.outputs.version != '' && needs.version.outputs.version != needs.version.outputs.previous_version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .vendor
           key: ${{ runner.os }}-vendor-${{ hashFiles('scripts/bootstrap.sh') }}
@@ -95,7 +95,7 @@ jobs:
     outputs:
       version: ${{ steps.cz.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -107,12 +107,12 @@ jobs:
         with:
           branch: main
           changelog: true
-          commitizen_version: '4.17.0'
+          commitizen_version: '4.18.0'
           push: false
 
       - run: make build
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: shotor-cli
           path: build/shotor-cli
@@ -129,19 +129,19 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The bump commit (with the updated CHANGELOG.md) is now on main.
           ref: main
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: Extract changelog for this version
         run: |
-          pip install 'commitizen==4.17.0'
+          pip install 'commitizen==4.18.0'
           cz changelog "${{ needs.build.outputs.version }}" \
             --dry-run > release-notes.md
 
@@ -152,7 +152,7 @@ jobs:
           path: build
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.build.outputs.version }}
           name: v${{ needs.build.outputs.version }}
