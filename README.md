@@ -1,303 +1,118 @@
 # shotor-cli
 
-Bundled scripts I often use. Drop in any standalone script and it just works™.
+A tiny dispatcher for your personal scripts. Drop any standalone executable into your scripts directory and run it as a subcommand.
+
+## How it works
+
+```sh
+love greet formal --loud Ada   # runs scripts/greet/formal --loud Ada
+love greet                     # lists commands under scripts/greet
+love                           # lists top-level commands
+```
+
+`shotor-cli` looks up a scripts directory (in order):
+
+1. `$SHOTOR_SCRIPTS_DIR` if set
+2. `${XDG_DATA_HOME:-$HOME/.local/share}/shotor-cli/scripts`
+3. a `scripts` directory next to the executable
+
+Then it walks your arguments to find the deepest matching executable and runs it, forwarding the rest of the arguments.
+
+Nested directories become nested subcommands. Because commands live under a single named prefix, they never collide with other tools on your `PATH`.
+
+Any path segment starting with `_` is private and hidden.
+
+Shell completions are installed automatically for Oh My Zsh, Zsh and Bash.
 
 ## Install
 
-Choose a dispatcher name and install it into a directory in `PATH`:
+Grab the prebuilt standalone script from the [latest release](https://github.com/shotor/shotor-cli/releases/latest), drop it somewhere on your `PATH` under any name you like, and make it executable:
 
 ```sh
-./install.sh --name love --install-dir "/home/lovelace/.local/bin"
-# "love" will now be available as a global executable
+curl -fsSL -o "$HOME/.local/bin/love" https://github.com/shotor/shotor-cli/releases/latest/download/shotor-cli
+chmod +x "$HOME/.local/bin/love"
 ```
 
-If `--name` is omitted, the installer uses `str` for the `shotor` user and prompts everyone else. The command directory is installed as `<name>-commands`.
-
-`install.sh` also installs completion for the chosen dispatcher name. Oh My Zsh is preferred when detected; otherwise, completion is installed for every available supported shell:
-
-- Zsh: `${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions/_love`
-- Bash: `${BASH_COMPLETION_USER_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion}/completions/love`
-
-For standalone Zsh, add the reported `site-functions` directory to `fpath` before `compinit`. Bash completion is loaded automatically when `bash-completion` is configured. The installer prints the relevant activation instructions.
-
-Skip completion installation when only the dispatcher and commands are needed:
+Then install shell completions:
 
 ```sh
-./install.sh --skip-completions --name love --install-dir "/home/lovelace/.local/bin"
+love --install-completions
 ```
 
-Install completion separately by passing the same dispatcher name. The installed completion is generated, so rerun this command whenever a script signature or its option metadata changes:
+### From source
+
+Clone the repo and run the installer with the name you want:
 
 ```sh
-./install-completions.sh love
+git clone https://github.com/shotor/shotor-cli
+cd shotor-cli
+./install.sh love --install-dir "$HOME/.local/bin"
 ```
 
-For convenience, add `--link` to symlink instead of copying:
-
-```sh
-./install.sh --link --name love --install-dir "/home/lovelace/.local/bin"
-```
-
-## Usage
-
-The installed dispatcher discovers executable files under its matching `<name>-commands` directory. For example, `str` uses `str-commands`. Directories become command namespaces, and the remaining arguments are forwarded unchanged to the matched executable.
-
-For example:
-
-```sh
-str-commands/
-├── kitty/
-│   └── toggle
-└── tmux/
-    └── layout/
-        └── ultrawide/
-            └── restore
-```
-
-These files are available as:
-
-```sh
-str kitty toggle
-str tmux layout ultrawide restore
-```
-
-Run `str` or any namespace by itself to list the commands below it:
-
-```sh
-str
-
-Available commands:
-  fzf
-  kitty
-  tmux
-  vm
-```
-
-```sh
-str tmux
-
-Available commands:
-  float
-  layout
-```
-
-```sh
-str tmux layout
-
-Available commands:
-  ultrawide
-```
-
-To add a command, place an executable script anywhere under `src/commands`:
-
-```sh
-chmod +x src/commands/example
-str example
-```
-
-Files and directories beginning with `_` are private and are not listed or dispatched.
-
-## Scripts
-
-<!-- BEGIN GENERATED SCRIPTS -->
-### `str fzf commands`
-
-Interactively select and run a shell command.
-
-```sh
-str fzf commands
-```
-
-### `str kitty toggle`
-
-Toggle the Kitty window and manage its KDE integration.
-
-```sh
-str kitty toggle [--debug|--install]
+This bundles a standalone executable into `${XDG_DATA_HOME:-$HOME/.local/share}/shotor-cli/` and symlinks the chosen name onto your `PATH`. It also installs shell completions.
 
 Options:
-  --debug     Print window detection and toggle decisions to stderr.
-  --install   Install the KDE shortcut and window rule.
-  -h, --help  Show help.
-```
-
-### `str tmux float`
-
-Toggle a persistent command in a tmux popup.
 
 ```sh
-str tmux float [--name <name>] [--kill] [--] [command [argument ...]]
-
-Options:
-  --name <name>  Name the persistent float; defaults to default.
-  --kill         Kill the named float instead of showing it.
-  -h, --help     Show help.
+<name>                Name of the PATH command (required)
+--install-dir <path>  Directory on PATH for the symlink (default: ~/.local/bin)
+--skip-completions    Do not install shell completions
 ```
 
-### `str tmux layout ultrawide restore`
+Either way, add your scripts to `${XDG_DATA_HOME:-$HOME/.local/share}/shotor-cli/scripts`.
 
-Restore the five-pane ultrawide tmux layout.
+## Writing scripts
+
+Each script is a normal executable. Nest directories for subcommands:
 
 ```sh
-str tmux layout ultrawide restore [--keep-active]
-
-Options:
-  --keep-active  Keep the active pane as the logical center.
-  -h, --help     Show help.
+scripts/
+├── backup            # love backup
+└── qemu/
+    ├── list          # love qemu list
+    ├── create        # love qemu create debian-13
+    └── snapshot/     # nest as deep as you like
+        └── restore   # love qemu snapshot restore debian-13
 ```
 
-### `str tmux layout ultrawide set`
+Anything after the matched command is forwarded to your script unchanged, so read arguments as usual (`$1`, `$@`, flags, and so on).
 
-Create the five-pane ultrawide tmux layout.
+See `examples/scripts` for working samples.
+
+### Metadata for completions
+
+Add special comments near the top of a script to drive shell completions and help text. They are optional, but recommended:
 
 ```sh
-str tmux layout ultrawide set [--kill-others] [-t <pane-id>]
+#!/usr/bin/env bash
+# @description Create a new QEMU virtual machine.
+# @usage love qemu create <name>
+# @option --disk <size>  Disk size, e.g. 20G
+# @option --ram <mb>     Memory in megabytes
+set -euo pipefail
 
-Options:
-  --kill-others  Kill all other panes before setting the layout.
-  -t <pane-id>   Target pane; defaults to the active pane.
-  -h, --help     Show help.
+# ...
 ```
 
-### `str vm get-ip`
+- `@description` — one-line summary shown when completing command names.
+- `@usage` — the invocation form.
+- `@option` — one per flag; text before two-or-more spaces is the flag(s) (comma-separated is fine, e.g. `-l, --loud`), the rest is its description. Flags are offered when completing that command.
 
-Print the non-loopback IPv4 address of a virtual machine.
-
-```sh
-str vm get-ip <vm-name>
-```
-
-### `str vm list`
-
-List all virtual machines and their status.
-
-```sh
-str vm list
-
-Options:
-  -h, --help  Show help.
-```
-
-### `str vm stop`
-
-Stop a VM's user service and then stop the virtual machine.
-
-```sh
-str vm stop [--force] <vm-name>
-
-Options:
-  --force     Power off the VM immediately.
-  -h, --help  Show help.
-```
-
-### `str xpra init`
-
-Configure Xpra desktop shortcuts and a user service for a VM.
-
-```sh
-str xpra init --name <name> [--user <user>]
-
-Options:
-  --name <name>  Virtual machine name.
-  --user <user>  Remote VM user; defaults to user.
-  -h, --help     Show help.
-```
-
-### `str xpra is-running`
-
-Check whether a local Xpra client is connected to a VM.
-
-```sh
-str xpra is-running <vm-name>
-
-Options:
-  -h, --help  Show help.
-```
-
-### `str xpra run`
-
-Start an application in a VM's existing Xpra session.
-
-```sh
-str xpra run <vm-name> <vm-ip> <command>
-
-Options:
-  -h, --help  Show help.
-```
-
-### `str xpra start`
-
-Start a VM and attach to or create its Xpra session.
-
-```sh
-str xpra start <vm-name>
-
-Options:
-  -h, --help  Show help.
-```
-
-### `str xpra start-and-notify`
-
-Start an Xpra VM session and notify systemd when ready.
-
-```sh
-str xpra start-and-notify [--timeout <seconds>] <vm-name>
-
-Options:
-  --timeout <seconds>  Readiness timeout; defaults to 60 seconds.
-  -h, --help           Show help.
-```
-
-<!-- END GENERATED SCRIPTS -->
+Completions are dynamic: they scan the scripts directory and read this metadata at completion time. Adding a new script (or editing its metadata) just works — no regeneration needed. Re-run the installer only to install under a different name.
 
 ## Development
 
-### Standalone
-
-Make changes directly in the `src` directory from your host machine. No additional development environment is required.
-
-Run the tool from source while developing:
-
 ```sh
-./src/dispatcher
-./src/dispatcher kitty toggle
-```
-
-### DevContainer
-
-Install dependencies:
-
-- [Docker](https://docs.docker.com/get-docker/)
-- [Visual Studio Code](https://code.visualstudio.com/) or [VSCodium](https://vscodium.com/)
-- One of the following:
-  - The [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-  - [Devsy](https://devsy.sh/) with the [Open Remote - SSH extension](https://open-vsx.org/extension/jeanp413/open-remote-ssh)
-
-Create your local environment file and update it:
-
-```sh
-cp .devcontainer/.env.example .devcontainer/.env
-```
-
-When using `VSCodium`, run the extension installer inside the container after it starts:
-
-```sh
-.devcontainer/install-extensions.sh
-```
-
-Run the tool:
-
-```sh
-./src/dispatcher
-./src/dispatcher kitty toggle
-```
-
-### Documentation
-
-The scripts reference is generated from command metadata. Regenerate it after adding or changing commands:
-
-```sh
-./update-readme-scripts.sh
+make build         # bundle a standalone executable into build/shotor-cli
+make test          # unit tests (src/**/*.bats)
+make test-watch    # unit tests in watch mode
+make e2e           # end-to-end tests (e2e/)
+make lint          # shellcheck
+make format        # shfmt with automatic fixing
+make format-check  # shfmt without automatic fixing
+make check         # lint + test + e2e
+make bootstrap     # fetch bats, shellcheck and shfmt into .vendor/
+make clean         # remove .vendor/ and build/
 ```
 
 ## License

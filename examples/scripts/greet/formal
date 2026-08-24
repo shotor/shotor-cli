@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# @description Greet someone formally (nested command example).
+# @usage love greet formal <name>
+# @option --loud  Shout the greeting
+set -euo pipefail
+
+loud=false
+if [[ "${1:-}" == "--loud" ]]; then
+  loud=true
+  shift
+fi
+
+name="${1:-madam or sir}"
+message="Good day, $name."
+
+if [[ "$loud" == true ]]; then
+  message="${message^^}"
+fi
+
+echo "$message"

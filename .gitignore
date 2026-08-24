@@ -15,3 +15,9 @@
 
 # temporary files
 __NOTES__.md
+
+# vendored tooling (fetched by scripts/bootstrap.sh)
+.vendor/
+
+# build output
+build/

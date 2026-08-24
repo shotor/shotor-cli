@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# @description Internal helper hidden from listing and completion.
+# @usage love _private helper
+set -euo pipefail
+
+echo "This command lives under a _private namespace and is not dispatched publicly."

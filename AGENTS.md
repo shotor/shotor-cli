@@ -17,14 +17,17 @@
 ## Verification
 
 - Run `bash -n` after changing a Bash script.
+- Run `make lint` (shellcheck), `make format-check` (shfmt), `make test` and
+  `make e2e` (bats); `make check` runs lint, test and e2e.
+- Unit tests live next to their source as `*.bats` under `src/`; end-to-end
+  tests live under `e2e/`.
 - Test successful and unsuccessful command dispatch when changing Shotor.
 - Keep error messages concise and write them to standard error.
 
 ## Documentation
 
 - Use `sh` fenced code blocks for CLI explanations, commands, and output examples; never use `text` fences for them.
-- Every public executable under `src/commands` must define `@description` and `@usage` metadata; add `@option` lines when applicable.
-- Run `./update-readme-scripts.sh` after adding commands or changing their script metadata.
+- Every public executable under the scripts directory must define `@description` and `@usage` metadata; add `@option` lines when applicable.
 
 ## Backup artifacts
 

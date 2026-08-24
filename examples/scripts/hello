@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# @description Print a friendly greeting.
+# @usage love hello [name]
+set -euo pipefail
+
+name="${1:-world}"
+echo "Hello, $name!"

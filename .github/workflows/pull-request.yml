@@ -1,0 +1,43 @@
+name: pull-request
+
+on:
+  pull_request:
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .vendor
+          key: ${{ runner.os }}-vendor-${{ hashFiles('scripts/bootstrap.sh') }}
+          restore-keys: ${{ runner.os }}-vendor-
+      - run: make lint
+      - run: make format-check
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .vendor
+          key: ${{ runner.os }}-vendor-${{ hashFiles('scripts/bootstrap.sh') }}
+          restore-keys: ${{ runner.os }}-vendor-
+      - run: make test
+      - run: make e2e
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shotor-cli
+          path: build/shotor-cli
+          if-no-files-found: error

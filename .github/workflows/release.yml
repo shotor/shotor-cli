@@ -1,0 +1,160 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: version check
+    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+      previous_version: ${{ steps.next.outputs.previous_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Determine next version
+        id: next
+        run: |
+          pip install 'commitizen==4.17.0'
+          previous="$(cz version --project)"
+          set +e
+          next="$(cz bump --yes --get-next 2>/tmp/cz-get-next.err)"
+          status=$?
+          set -e
+
+          if [[ "$status" -ne 0 ]]; then
+            echo "No bumpable increment (exit ${status})."
+            cat /tmp/cz-get-next.err || true
+            next=""
+          fi
+
+          {
+            echo "previous_version=${previous}"
+            echo "version=${next}"
+          } >> "$GITHUB_OUTPUT"
+          echo "previous=${previous} next=${next:-<none>}"
+
+  lint:
+    name: lint
+    needs: version
+    if: needs.version.outputs.version != '' && needs.version.outputs.version != needs.version.outputs.previous_version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/cache@v4
+        with:
+          path: .vendor
+          key: ${{ runner.os }}-vendor-${{ hashFiles('scripts/bootstrap.sh') }}
+          restore-keys: ${{ runner.os }}-vendor-
+      - run: make lint
+      - run: make format-check
+
+  test:
+    name: test
+    needs: version
+    if: needs.version.outputs.version != '' && needs.version.outputs.version != needs.version.outputs.previous_version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/cache@v4
+        with:
+          path: .vendor
+          key: ${{ runner.os }}-vendor-${{ hashFiles('scripts/bootstrap.sh') }}
+          restore-keys: ${{ runner.os }}-vendor-
+      - run: make test
+      - run: make e2e
+
+  build:
+    name: bump, build, push
+    needs: [version, lint, test]
+    if: |
+      always() &&
+      needs.version.outputs.version != '' &&
+      needs.version.outputs.version != needs.version.outputs.previous_version &&
+      needs.lint.result == 'success' &&
+      needs.test.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.cz.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
+
+      - name: Bump version (local commit + tag, no push yet)
+        id: cz
+        uses: commitizen-tools/commitizen-action@338bbd841b75aaee6bf5340e1fa12f6ab58ff9ff # v0.27.1
+        with:
+          branch: main
+          changelog: true
+          commitizen_version: '4.17.0'
+          push: false
+
+      - run: make build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shotor-cli
+          path: build/shotor-cli
+          if-no-files-found: error
+
+      - name: Push bump commit and tag
+        run: git push origin "HEAD:main" --tags
+
+  publish:
+    name: publish GitHub release
+    needs: build
+    if: needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The bump commit (with the updated CHANGELOG.md) is now on main.
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Extract changelog for this version
+        run: |
+          pip install 'commitizen==4.17.0'
+          cz changelog "${{ needs.build.outputs.version }}" \
+            --dry-run > release-notes.md
+
+      - name: Download built executable
+        uses: actions/download-artifact@v4
+        with:
+          name: shotor-cli
+          path: build
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: v${{ needs.build.outputs.version }}
+          body_path: release-notes.md
+          files: build/shotor-cli
